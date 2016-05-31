@@ -1,0 +1,6 @@
+{
+  "urls": ["images/pipe-south.png"],
+  "sprites":[
+    {"id": "idle", "url": 0, "x": 0,   "y": 0, "w": 66, "h": 400}
+  ]
+}
