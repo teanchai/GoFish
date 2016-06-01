@@ -55,22 +55,28 @@ public class Fish  {
         bodyDef.type = BodyType.DYNAMIC;
         bodyDef.position =new Vec2(0,0);
         body = world.createBody(bodyDef);
-        Vec2 vec = new Vec2(0,0f);
         body.setGravityScale(1f);
-
-
-        shape.setAsBox(sprite.layer().width() * TestScreen.M_PER_PIXEL / 2,
-                    sprite.layer().height() * TestScreen.M_PER_PIXEL / 2);
-
         fixtureDef.shape = shape;
+
         fixtureDef.density = 0.5f;
         fixtureDef.friction = 0f;
         fixtureDef.restitution = 0.2f; // ทำให้เด้ง
-        body.createFixture(fixtureDef);
+        /*if(state==State.BIG){
+            shape.setAsBox(192 * TestScreen.M_PER_PIXEL / 2,
+                    128 * TestScreen.M_PER_PIXEL / 2);
+            shape.validate();
+        }else {
+            shape.setAsBox(sprite.layer().width() * TestScreen.M_PER_PIXEL / 2,
+                    sprite.layer().height() * TestScreen.M_PER_PIXEL / 2);
+        }*/
+        shape.setAsBox(sprite.layer().width() * TestScreen.M_PER_PIXEL / 2,
+                sprite.layer().height() * TestScreen.M_PER_PIXEL / 2);
         body.setLinearDamping(1f);
         body.setTransform(new Vec2(x,y), 0f);
         body.setFixedRotation(true);
         body.setActive(true);
+        body.createFixture(fixtureDef);
+
         return body;
     }
 
@@ -93,7 +99,6 @@ public class Fish  {
                         state = State.RUN;
                     }break;
                 case BIG: offset=12;
-
                     break;
 
             }
@@ -106,11 +111,15 @@ public class Fish  {
     public void paint(Clock clock) {
 
         if(hasLoaded == false){return;}
-
-        sprite.layer().setTranslation(
-                (body.getPosition().x / TestScreen.M_PER_PIXEL),
-                body.getPosition().y / TestScreen.M_PER_PIXEL);
-
+        if(state==State.BIG) {
+            sprite.layer().setTranslation(
+                    (body.getPosition().x / TestScreen.M_PER_PIXEL-70f),
+                    body.getPosition().y/ TestScreen.M_PER_PIXEL-65f);
+        }else {
+            sprite.layer().setTranslation(
+                    (body.getPosition().x / TestScreen.M_PER_PIXEL),
+                    body.getPosition().y / TestScreen.M_PER_PIXEL);
+        }
 
     }
     public Layer layer() {

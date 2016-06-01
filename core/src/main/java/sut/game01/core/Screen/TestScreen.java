@@ -1,6 +1,5 @@
 package sut.game01.core.Screen;
 
-
 import org.jbox2d.callbacks.ContactImpulse;
 import org.jbox2d.callbacks.ContactListener;
 import org.jbox2d.callbacks.DebugDraw;
@@ -11,16 +10,13 @@ import org.jbox2d.dynamics.*;
 import org.jbox2d.dynamics.contacts.Contact;
 import playn.core.*;
 import playn.core.util.Clock;
-import sut.game01.core.Scores.Number1;
 import sut.game01.core.character.*;
 import sut.game01.core.items.Food;
-import sut.game01.core.Scores.Number;
 import sut.game01.core.items.Star;
 import sut.game01.core.pipe.Pipenorth;
 import sut.game01.core.pipe.Pipesouth;
 import tripleplay.game.Screen;
 import tripleplay.game.ScreenStack;
-
 import static playn.core.PlayN.*;
 import java.util.ArrayList;
 import java.util.Random;
@@ -41,7 +37,6 @@ public class TestScreen extends Screen{
     private Sound soundJump;
     private Sound soundPowerup;
     private Sound soundStar;
-    private World world;
     private boolean showDebugDraw = true;
     private DebugDrawBox2D debugdraw;
     public int i=0;
@@ -61,7 +56,13 @@ public class TestScreen extends Screen{
     private Sound soundCoin;
     private Sound soundGameover;
     Random random = new Random();
+    Vec2 gravity = new Vec2(10.0f,50.0f);
+    private World world=new World(gravity);
     float widthfix = widthfixed-random.nextInt(350);
+    final Body ground = world.createBody(new BodyDef());
+    final Body ground1 = world.createBody(new BodyDef());
+    final Body ground2 = world.createBody(new BodyDef());
+    final Body ground3 = world.createBody(new BodyDef());
 
 
     public TestScreen(final ScreenStack ss) {
@@ -74,8 +75,7 @@ public class TestScreen extends Screen{
         soundStar = assets().getSound("sounds/pass");
         soundGameover = assets().getSound("sounds/gameover");
 
-        Vec2 gravity = new Vec2(10.0f,50.0f);
-        world = new World(gravity);
+
         world.setWarmStarting(true);
         world.setAutoClearForces(true);
 
@@ -90,29 +90,33 @@ public class TestScreen extends Screen{
         Image fgImage = assets().getImage("images/seaground.png");
         this.foreground = graphics().createImageLayer(fgImage);
 
+
         PlayN.keyboard().setListener(new Keyboard.Adapter(){
             @Override
             public void onKeyDown(Keyboard.Event event) {
-                if(event.key() == Key.SPACE & f.body().isActive()){
-                    super.onKeyDown(event);
-                    f.body().applyForce(new Vec2(0, -4000f), f.body().getPosition());
-                    soundJump.play();
-
+                try {
+                    if(event.key() == Key.SPACE & f.body().isActive()){
+                        super.onKeyDown(event);
+                        jump();
+                    }if(event.key() == Key.ESCAPE){
+                        //f.layer().destroy();
+                        world.destroyBody(f.body());
+                        pipenorths.clear();
+                        pipesouths.clear();
+                        foods.clear();
+                        //coins.clear();
+                        stars.clear();
+                        ss.push(new HomeScreen(ss));
+                    }if(event.key() == Key.ENTER){
+                        ss.push(new TestScreen(ss));
+                    }
+                }
+                catch (NullPointerException ex) {
+                    ex.printStackTrace();
                 }
 
-                if(event.key() == Key.ESCAPE){
-                    f.layer().destroy();
-                    world.destroyBody(f.body());
-                    pipenorths.clear();
-                    pipesouths.clear();
-                    foods.clear();
-                    //coins.clear();
-                    stars.clear();
-                    ss.push(new HomeScreen(ss));
-                }
-                if(event.key() == Key.ENTER){
-                    ss.push(new TestScreen(ss));
-                }
+
+
             }
         });
         /*PlayN.mouse().setListener(new Mouse.Adapter(){
@@ -123,6 +127,11 @@ public class TestScreen extends Screen{
                 soundJump.play();
             }
         });*/
+    }
+
+    private void jump() {
+        f.body().applyForce(new Vec2(0, -4000f), f.body().getPosition());
+        soundJump.play();
     }
 
     @Override
@@ -185,88 +194,34 @@ public class TestScreen extends Screen{
 
             world.setDebugDraw(debugdraw);
         }
-        final Body ground = world.createBody(new BodyDef());
+
         final EdgeShape groundShape = new EdgeShape();
         groundShape.set(new Vec2(0,15),new Vec2(240,15));
         ground.createFixture(groundShape,0f);
 
-        final Body ground1 = world.createBody(new BodyDef());
         final EdgeShape groundShape1 = new EdgeShape();
-        groundShape1.set(new Vec2(width+1,0),new Vec2(width+1,height));
+        groundShape1.set(new Vec2(width+1,-5),new Vec2(width+1,height));
         ground1.createFixture(groundShape1, 0f);
 
-        final Body ground2 = world.createBody(new BodyDef());
         EdgeShape groundShape2 = new EdgeShape();
         groundShape2.set(new Vec2(0,height),new Vec2(0,0));
         ground2.createFixture(groundShape2, 0f);
 
-        /*final Body ground3 = world.createBody(new BodyDef());
         EdgeShape groundShape3 = new EdgeShape();
-        groundShape3.set(new Vec2(0,0),new Vec2(width,0));
-        ground3.createFixture(groundShape3, 0f);*/
+        groundShape3.set(new Vec2(0,-5),new Vec2(width,-5));
+        ground3.createFixture(groundShape3, 0f);
 
 
         world.setContactListener(new ContactListener() {
             @Override
             public void beginContact(Contact contact) {
-                Body a = contact.getFixtureA().getBody();
-                Body b = contact.getFixtureB().getBody();
-                /*if(a == coins.get(i).body()||b == coins.get(i).body()){
-                    soundCoin.play();
-                    c++;
-                    GameOver.totalcoin++;
-                }*/
-
-                if(a == ground1 || b == ground1){
-                    GameOver.totalcoin++;
-                    ss.push(new TestScreen(ss));
-
+                if(contact.getFixtureA().getBody()== f.body()
+                        ||contact.getFixtureB().getBody()== f.body()) {
+                    Body a = contact.getFixtureA().getBody();
+                    Body b = contact.getFixtureB().getBody();
+                    setContacted(a,b);
                 }
-                if(a == stars.get(i).body()||b == stars.get(i).body()){
-                    soundStar.play();
-                    clash=1;
-                    GameOver.totalstar++;
-                    pipenorths.get(i).body().setActive(false);
-                    pipesouths.get(i).body().setActive(false);
-                }
-                if(a == foods.get(i).body()||b == foods.get(i). body()){
-                    soundPowerup.play();
-                    clashfood=1;
-                    f.state = Fish.State.BIG;
-                    GameOver.totalfood++;
-                }
-                if((a==pipenorths.get(i).body()||b==pipenorths.get(i).body())){
-                    soundHit.play();
-                    clash1++;
-                    f.state = Fish.State.ATTK;
-                    if(f.body()==a) {
-                        a.applyLinearImpulse(new Vec2(-100f, -50f), a.getPosition());
-                    }else {
-                        b.applyLinearImpulse(new Vec2(-100f, -50f), b.getPosition());
-                    }
 
-                }if((a==pipesouths.get(i).body()||b==pipesouths.get(i).body())){
-                    soundHit.play();
-                    clash1++;
-                    f.state = Fish.State.ATTK;
-                    if(f.body()==a) {
-                        a.applyLinearImpulse(new Vec2(-100f, 50f), a.getPosition());
-                    }else {
-                        b.applyLinearImpulse(new Vec2(-100f, 50f), b.getPosition());
-                    }
-
-                }if((a==pipenorths.get(i).body()||b==pipenorths.get(i).body())&&clashfood==1&pipenorths.get(i).body().isActive()){
-                    clash1=0;
-                    destroyed++;
-                    f.state = Fish.State.ATTK;
-                    GameOver.totaldestroy++;
-
-                }if((a==pipesouths.get(i).body()||b==pipesouths.get(i).body())&&clashfood==1&pipenorths.get(i).body().isActive()){
-                    clash1=0;
-                    destroyed1++;
-                    f.state = Fish.State.ATTK;
-                    GameOver.totaldestroy++;
-                }
             }
             @Override
             public void endContact(Contact contact) {
@@ -285,12 +240,67 @@ public class TestScreen extends Screen{
         });
     }
 
+    public void setContacted(Body a,Body b) {
+        /*if(f.body() == coins.get(i).body()||b == coins.get(i).body()){
+                    soundCoin.play();
+                    c++;
+                    GameOver.totalcoin++;
+                }*/
+        if(a == ground1 || b == ground1){
+            GameOver.totalcoin++;
+            ss.push(new TestScreen(ss));
+        }
+        if(a == stars.get(i).body()||b == stars.get(i).body()){
+            soundStar.play();
+            clash=1;
+            GameOver.totalstar++;
+            try {
+                pipenorths.get(i).body().setActive(false);
+                pipesouths.get(i).body().setActive(false);
+            }
+            catch (NullPointerException ex) {
+                ex.printStackTrace();
+            }
+        }
+        if(a == foods.get(i).body()||b == foods.get(i). body()){
+            soundPowerup.play();
+            clashfood=1;
+            f.state = Fish.State.BIG;
+            GameOver.totalfood++;
+        }
+        if((a==pipenorths.get(i).body()||b==pipenorths.get(i).body())){
+            soundHit.play();
+            clash1++;
+            f.state = Fish.State.ATTK;
+            f.body().applyLinearImpulse(new Vec2(-50f, -50f), f.body().getPosition());
+
+
+        }if((a==pipesouths.get(i).body()||b==pipesouths.get(i).body())){
+            soundHit.play();
+            clash1++;
+            f.state = Fish.State.ATTK;
+            f.body().applyLinearImpulse(new Vec2(-50f, 50f), f.body().getPosition());
+
+
+        }if((a==pipenorths.get(i).body()||b==pipenorths.get(i).body())&&clashfood==1){
+            clash1=0;
+            destroyed++;
+            f.state = Fish.State.ATTK;
+            GameOver.totaldestroy++;
+
+        }if((a==pipesouths.get(i).body()||b==pipesouths.get(i).body())&&clashfood==1){
+            clash1=0;
+            destroyed1++;
+            f.state = Fish.State.ATTK;
+            GameOver.totaldestroy++;
+        }
+    }
+
     public void showLife() {
         this.layer.add(heart);
         this.layer.add(heart1);
         this.layer.add(heart2);
     }
-
     @Override
     public void update(int delta) {
         super.update(delta);
@@ -336,10 +346,6 @@ public class TestScreen extends Screen{
                 world.destroyBody(coins.get(i).body());
                 System.out.println("Coin = " + String.valueOf(c));
             }*/
-           /* if(clash==1){
-                pipenorths.get(i).body().setActive(false);
-                pipesouths.get(i).body().setActive(false);
-            }*/
             if(clash1==1){
                 heart2.destroy();
                 GameOver.life--;
@@ -349,8 +355,8 @@ public class TestScreen extends Screen{
                 GameOver.life--;
             }
             if(clash1==3){
-                GameOver.life--;
                 heart.destroy();
+                GameOver.life--;
                 gameover=true;
             }
 
@@ -371,7 +377,7 @@ public class TestScreen extends Screen{
         }
         if(gameover){
             soundGameover.play();
-            f.layer().destroy();
+            //f.layer().destroy();
             world.destroyBody(f.body());
             pipenorths.clear();
             pipesouths.clear();
@@ -379,7 +385,7 @@ public class TestScreen extends Screen{
             //coins.clear();
             stars.clear();
             HomeScreen.soundbg.stop();
-            f.body().setActive(false);
+            //f.body().setActive(false);
             ss.push(new GameOver(ss));
 
         }
